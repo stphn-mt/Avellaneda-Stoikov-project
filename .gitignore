@@ -1,2 +1,3 @@
-secrets.py
 venv/
+data/
+my_APIKey.py

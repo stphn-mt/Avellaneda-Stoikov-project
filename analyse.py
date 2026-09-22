@@ -3,6 +3,10 @@ from datetime import datetime, timedelta
 import tqdm
 import numpy as np
 
+"""
+Take the time-series data, and derive other import time series data that trading models will use
+(e.g. volatility, mid-prices, spread)
+"""
 market_ts = pd.read_parquet(
     "data/reconstructed_orderbook.parquet"
 )
@@ -35,3 +39,4 @@ df.to_parquet(
     "data/derived_quantities.parquet",
     index=False
 )
+print(df.head())

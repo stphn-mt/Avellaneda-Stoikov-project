@@ -1,6 +1,9 @@
 import cryptohftdata as chd
-from secrets import API_KEY
-
+from my_APIKey import API_KEY
+"""
+Dowload data using chd API - full L2 limit order book data.
+store as parquet (compressed) file and print some information about data
+"""
 chd.configure_client(api_key=API_KEY)
 
 print("Downloading orderbook data...")

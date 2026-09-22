@@ -3,11 +3,10 @@ from datetime import datetime, timedelta
 import tqdm
 import numpy as np
 
-events = pd.read_parquet(
-    "data/binance_spot/2026-08-31/00/BTCUSDT_orderbook.parquet"
-)
+"""
+take the dowloaded orderbook data, and make time-series data and store it.
+"""
 
-df = events.copy()
 
 # Reconstruct orderbook from events
 # Load orderbook events
@@ -15,8 +14,8 @@ df = events.copy()
 # Convert price and quantity to float
 df["price"] = df["price"].astype(float)
 df["quantity"] = df["quantity"].astype(float)
-
-
+df["event_time"] = pd.to_datetime(df["event_time"], unit="ms") #could do ns too
+print(df["event_time"].head())
 # Reconstruct the final orderbook
 orderbook = {
     'bid': {},
@@ -30,6 +29,7 @@ quantities = np.array(df["quantity"])
 event_types = np.array(df["event_type"])
 sides = np.array(df["side"])
 times = np.array(df["event_time"])
+
 #time series
 time_series = []
 best_bids = []
@@ -37,12 +37,6 @@ best_asks = []
 bb_qty = []
 ba_qty = []
 
-# derived qty's
-mid_prices = []
-# spread = []
-# bid_depth = []
-# ask_depth = []
-# order_book_imbalance = []
 
 prev_time = 0
 for i in tqdm.tqdm(range(len(df))):
@@ -80,9 +74,6 @@ for i in tqdm.tqdm(range(len(df))):
 
     prev_time = time #always update to new time.
 
-
-
-
 market_data = pd.DataFrame({
     "event_time": time_series,
     "best_bid": best_bids,
@@ -91,8 +82,4 @@ market_data = pd.DataFrame({
     "best_ask_qty": ba_qty,
 })
 
-market_data.to_parquet(
-    "data/reconstructed_orderbook.parquet",
-    index=False
-)
 

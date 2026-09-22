@@ -3,6 +3,11 @@ import pandas as pd
 
 from models import naive_strategy, as_strategy
 
+"""
+Backtest and compare a naive benchmark strategy with Avellaneda Stoikov strategy.
+
+"""
+
 market_data = pd.read_parquet(
     "data/derived_quantities.parquet"
 )
@@ -34,14 +39,17 @@ def calculate_metrics(results, initial_cash=1000000.0):
     # mark-to-market Pnl
     results["portfolio_value"] = (results["cash"]+ results["inventory"] * results["mid_price"])
     results["pnl"] = (results["portfolio_value"] - initial_cash)
-    results["strategy_returns"] = (results["portfolio_value"].pct_change())
+    results["event_time"] = pd.to_datetime(results["event_time"], unit="ms")
+    results = results.set_index("event_time")
 
-    returns = results["strategy_returns"].dropna()
+    portfolio_1s = results["portfolio_value"].resample("1s").last().ffill()
+    returns_1s = portfolio_1s.pct_change().dropna()
+
     # sharpe
-    if returns.std() == 0:
+    if returns_1s.std() == 0:
         sharpe = np.nan
     else:
-        sharpe = returns.mean() / returns.std()
+        sharpe = returns_1s.mean() / returns_1s.std()
 
     max_inventory = results["inventory"].abs().max()
     average_inventory = results["inventory"].abs().mean()
@@ -83,7 +91,7 @@ def backtest(df, strategy, initial_cash=1000000.0):
         spread = current["spread"]
 
         # find time_horizon
-        time_horizon = (df["event_time"].iloc[-1]-current["event_time"]) / 1000 #seconds
+        time_horizon = (df["event_time"].iloc[-1]-current["event_time"]) / 1000 #ms to seconds conversion
         # Generate our quotes at 1s resolution
         if current["event_time"] >= next_quote_time:
             bid_quote, ask_quote = strategy(
@@ -132,33 +140,38 @@ def backtest(df, strategy, initial_cash=1000000.0):
 
     results = pd.DataFrame(results)
     return results
-naive_results = backtest(
-    market_data,
-    naive_strategy,
-)
 
-as_results = backtest(
-    market_data,
-    as_strategy,
-)
+def main():
+    naive_results = backtest(
+        market_data,
+        naive_strategy,
+    )
 
-naive_metrics = calculate_metrics(naive_results)
-as_metrics = calculate_metrics(as_results)
-print("naive model \n", pd.DataFrame([naive_metrics]))
-print("Avellenada-Stoikov model \n", pd.DataFrame([as_metrics]))
+    as_results = backtest(
+        market_data,
+        as_strategy,
+    )
 
-# print(as_results[[
-#     "event_time",
-#     "bid_quote",
-#     "ask_quote",
-#     "bid_filled",
-#     "ask_filled",
-#     "cash",
-#     "inventory",
-# ]].head(10))
+    naive_metrics = calculate_metrics(naive_results)
+    as_metrics = calculate_metrics(as_results)
+    print("naive model \n", pd.DataFrame([naive_metrics]))
+    print("Avellenada-Stoikov model \n", pd.DataFrame([as_metrics]))
 
-print("Bid fills:", as_results["bid_filled"].sum(), naive_results["bid_filled"].sum())
-print("Ask fills:", as_results["ask_filled"].sum(), naive_results["ask_filled"].sum())
-print("Final inventory:", as_results["inventory"].iloc[-1], naive_results["inventory"].iloc[-1])
-print("Max inventory:", as_results["inventory"].abs().max(), naive_results["inventory"].abs().max())
-print("Final PnL:", as_results["pnl"].iloc[-1], naive_results["pnl"].iloc[-1])
+    # print(as_results[[
+    #     "event_time",
+    #     "bid_quote",
+    #     "ask_quote",
+    #     "bid_filled",
+    #     "ask_filled",
+    #     "cash",
+    #     "inventory",
+    # ]].head(10))
+
+    print("Bid fills:", as_results["bid_filled"].sum(), naive_results["bid_filled"].sum())
+    print("Ask fills:", as_results["ask_filled"].sum(), naive_results["ask_filled"].sum())
+    print("Final inventory:", as_results["inventory"].iloc[-1], naive_results["inventory"].iloc[-1])
+    print("Max inventory:", as_results["inventory"].abs().max(), naive_results["inventory"].abs().max())
+    print("Final PnL:", as_results["pnl"].iloc[-1], naive_results["pnl"].iloc[-1])
+
+if __name__ == '__main__':
+    main()

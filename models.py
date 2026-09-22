@@ -1,5 +1,7 @@
 import numpy as np
-
+"""
+different strategies
+"""
 
 def naive_strategy(mid_price, volatility, spread, inventory, time_horizon):
     alpha=1.0
