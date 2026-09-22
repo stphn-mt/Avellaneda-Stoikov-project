@@ -12,9 +12,8 @@ market_ts = pd.read_parquet(
 )
 
 df = market_ts.copy()
-"""
-find volatility, returns, mid prices etc. from market_ts
-"""
+# find volatility, returns, mid prices etc. from market_ts
+
 df["datetime"] = pd.to_datetime(
     df["event_time"],
     unit="ms"

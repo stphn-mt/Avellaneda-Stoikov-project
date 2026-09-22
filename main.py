@@ -1,7 +1,7 @@
 from backtest import backtest, calculate_metrics
 from reconstruct import reconstruct
 from analyse import analysis
-import matplotlib as plt
+import matplotlib.pyplot as plt
 from pathlib import Path
 import pandas as pd
 
@@ -31,6 +31,12 @@ RESOLUTIONS = ["100ms", "1s", "5s", "1min"]
 
 all_results = {}
 def main():
+    """
+    backtest:
+    current inventory + low res data + high res data -> sim fill + update P&L, inventory 
+    
+    calculate other metrics: max drawdown, sharpe, inventory exposure.
+    """
     next_cash = 100000
     for resolution in RESOLUTIONS:
         for hour in HOURS:
@@ -52,17 +58,18 @@ def main():
                                 })
             
             
+            
             next_cash = results["cash"].iloc[-1] # continue trading into the next hour
-            # the loop will be the backtest
-            # loop:
-            # current inventory + low res data + high res data -> sim fill + update P&L, inventory 
-            # 
-            # calculate other metrics: max drawdown, sharpe, inventory exposure.
+
+    plot_data(all_results)
 
 def plot_data(all_results):
     # plot_pnl(all_results)
+    plt.plot(all_results["cash"], all_results["time_res"]) #change cash to something else?
     # plot_inventory(all_results)
+    plt.plot(all_results["inventory"], all_results["time_res"])
     # plot_drawdown(all_results)
+    plt.plot(all_results["max_drawdown"], all_results["time_res"])
     # plot_quotes(...)
           
 def record_data(hour, metrics, resolution): #either compare each hour (24 samples) or compare different time resolution performances
