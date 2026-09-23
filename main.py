@@ -1,6 +1,6 @@
 from backtest import backtest, calculate_metrics
 from reconstruct import reconstruct
-from analyse import analysis
+from analyse import analyse
 import matplotlib.pyplot as plt
 from pathlib import Path
 import pandas as pd
@@ -17,7 +17,7 @@ import pandas as pd
 
 # market_data.to_parquet(
 #     "data/timeseries/hour00.parquet",
-#     index=False
+#     index=False -> we should save our index because it holds datetime!
 # )
 """
 from reconstruct: read parquet of raw data, convert into market data time series we can use
@@ -44,7 +44,7 @@ def main():
             timeseries = pd.read_parquet(hour)
 
             market = reconstruct(timeseries) #take raw data and turn into time series (HIGH RES)
-            market_analysis = analysis(market, resolution) # use time series to derive time series (LOW RES)
+            market_analysis = analyse(market, resolution) # use time series to derive time series (LOW RES)
 
             results = backtest(market, market_analysis, initial_cash=next_cash) #quotes, fills, cash, inventory, mid_price,
             metrics = calculate_metrics(results) # pandas DF

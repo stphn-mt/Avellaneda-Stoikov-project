@@ -7,35 +7,41 @@ import numpy as np
 Take the time-series data, and derive other import time series data that trading models will use
 (e.g. volatility, mid-prices, spread)
 """
-market_ts = pd.read_parquet(
-    "data/reconstructed_orderbook.parquet"
-)
 
-df = market_ts.copy()
-# find volatility, returns, mid prices etc. from market_ts
+def analyse(market, time_res):
+    df = market.copy()
 
-df["datetime"] = pd.to_datetime(
-    df["event_time"],
-    unit="ms"
-)
+    df["datetime"] = pd.to_datetime(df["event_time"], unit="ms")
+    df = df.set_index("datetime")
 
-# Use datetime as the index
-df = df.set_index("datetime")
+    # mid prices
+    df["mid_price"] = (df["best_bid"] + df["best_ask"]) / 2
+    df["mid_price"] = df["mid_price"].resample(time_res).last()
+    df["spread"] = df["best_ask"] - df["best_bid"]
+    df["spread"] = df["spread"].resample(time_res).last()
 
-# mid prices
-df["mid_price"] = (df["best_bid"] + df["best_ask"]) / 2
-df["spread"] = df["best_ask"] - df["best_bid"]
+    # Log returns
+    df["log_return"] = np.log(df["mid_price"] / df["mid_price"].shift(1))
+    df["log_return"] = df["log_return"].resample(time_res).sum()
 
-# Log returns
-df["log_return"] = np.log(df["mid_price"] / df["mid_price"].shift(1))
+    # Rolling 1-second volatility
+    df["volatility"] = (df["log_return"].rolling(time_res).std())
 
-# Rolling 1-second volatility
-df["volatility"] = (df["log_return"].rolling("1s").std())
+# we calculate OFI seperately after we compare "inventory-aware" vs naive model results
+def calculate_ofi(df, time_res):
 
-# df = df.dropna()
+    bid_price_prev = df["best_bid"].shift(1)
+    ask_price_prev = df["best_ask"].shift(1)
 
-df.to_parquet(
-    "data/derived_quantities.parquet",
-    index=False
-)
-print(df.head())
+    bid_qty_prev = df["best_bid_qty"].shift(1)
+    ask_qty_prev = df["best_ask_qty"].shift(1)
+
+    df["ofi"] = (
+        (df["best_bid"] >= bid_price_prev) * df["best_bid_qty"]
+        - (df["best_bid"] <= bid_price_prev) * bid_qty_prev
+        - (df["best_ask"] <= ask_price_prev) * df["best_ask_qty"]
+        + (df["best_ask"] >= ask_price_prev) * ask_qty_prev
+    )
+    df["ofi"].resample(time_res).sum()
+
+    return df["ofi"]
