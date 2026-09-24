@@ -11,21 +11,20 @@ Take the time-series data, and derive other import time series data that trading
 def analyse(market, time_res):
     df = market.copy()
 
-    df["datetime"] = pd.to_datetime(df["event_time"], unit="ms")
+    df["sampletime"] = pd.to_datetime(df["event_time"], unit="ms")
     df = df.set_index("datetime")
+
+    df = df.resample(time_res).last()
 
     # mid prices
     df["mid_price"] = (df["best_bid"] + df["best_ask"]) / 2
-    df["mid_price"] = df["mid_price"].resample(time_res).last()
     df["spread"] = df["best_ask"] - df["best_bid"]
-    df["spread"] = df["spread"].resample(time_res).last()
 
     # Log returns
     df["log_return"] = np.log(df["mid_price"] / df["mid_price"].shift(1))
-    df["log_return"] = df["log_return"].resample(time_res).sum()
-
     # Rolling 1-second volatility
     df["volatility"] = (df["log_return"].rolling(time_res).std())
+    return df[["mid_price", "spread", "log_return", "volatility"]]
 
 # we calculate OFI seperately after we compare "inventory-aware" vs naive model results
 def calculate_ofi(df, time_res):

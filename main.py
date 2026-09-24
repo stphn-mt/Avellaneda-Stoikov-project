@@ -1,5 +1,6 @@
 from backtest import backtest, calculate_metrics
 from reconstruct import reconstruct
+from models import naive_strategy, as_strategy
 from analyse import analyse
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -37,7 +38,10 @@ def main():
     
     calculate other metrics: max drawdown, sharpe, inventory exposure.
     """
-    next_cash = 100000
+    next_cash_as = 1000000.0
+    next_cash_naive = 1000000.0
+    next_inventory_naive = 0
+    next_inventory_as = 0
     for resolution in RESOLUTIONS:
         for hour in HOURS:
             print(f"processing {hour.name}")
@@ -46,20 +50,25 @@ def main():
             market = reconstruct(timeseries) #take raw data and turn into time series (HIGH RES)
             market_analysis = analyse(market, resolution) # use time series to derive time series (LOW RES)
 
-            results = backtest(market, market_analysis, initial_cash=next_cash) #quotes, fills, cash, inventory, mid_price,
-            metrics = calculate_metrics(results) # pandas DF
+            naive_results = backtest(market, market_analysis, naive_strategy, initial_cash=next_cash_naive, initial_inventory=next_inventory_naive) #quotes, fills, cash, inventory, mid_price,
+            as_results = backtest(market, market_analysis, as_strategy, initial_cash=next_cash_as, initial_inventory=next_inventory_as) #we need to fix which cash goes where.
 
-            record_data(hour, metrics, resolution)
+            naive_metrics = calculate_metrics(naive_results) # pandas DF
+            as_metrics = calculate_metrics(as_results)
+
+            record_data(hour, naive_metrics, resolution)
+            record_data(hour, as_metrics, resolution)
 
             all_results.append({"time_res": resolution,
                                 "hour": hour,
                                 "results": results,
                                 "metrics": metrics,
                                 })
-            
-            
-            
-            next_cash = results["cash"].iloc[-1] # continue trading into the next hour
+            # continue trading into the next hour
+            next_cash_naive = naive_results["cash"].iloc[-1] 
+            next_inventory_naive = naive_results["inventory"].iloc[-1]
+            next_cash_as = as_results["cash"].iloc[-1]
+            next_inventory_as = as_results["inventory"].iloc[-1]
 
     plot_data(all_results)
 

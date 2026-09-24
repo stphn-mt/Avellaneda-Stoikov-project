@@ -72,10 +72,14 @@ def calculate_metrics(results, initial_cash=1000000.0):
         "max_drawdown_pct": max_drawdown_pct,
     }
 
-def backtest(df, strategy, initial_cash=1000000.0):
-
+def backtest(HR_df, LR_df, strategy, initial_cash=1000000.0, initial_inventory=0):
+    """
+    HR_df is the high-resolution data; use for simulating fills
+    LR_df is the low-resolution data; use for strategy decisions.
+    be careful about using index (datetime) from LR_df, and event_time from HR_df
+    """
     cash = initial_cash
-    inventory = 0.0
+    inventory = initial_inventory
     results = []
     next_quote_time = df["event_time"].iloc[0]
     bid_active = False
@@ -93,7 +97,7 @@ def backtest(df, strategy, initial_cash=1000000.0):
         # find time_horizon
         time_horizon = (df["event_time"].iloc[-1]-current["event_time"]) / 1000 #ms to seconds conversion
         # Generate our quotes at 1s resolution
-        if current["event_time"] >= next_quote_time:
+        if current["event_time"] >= next_quote_time: #nqt is the minimum next time we take our quote; updates 1second from current event_time
             bid_quote, ask_quote = strategy(
                 mid_price=mid_price,
                 volatility=volatility,
@@ -128,50 +132,14 @@ def backtest(df, strategy, initial_cash=1000000.0):
                 ask_active = False
 
         results.append({
-            "event_time": future["event_time"],
-            "bid_quote": bid_quote,
-            "ask_quote": ask_quote,
+            "quote_time": future["event_time"], #useful to keep in case some quotes are dropped
+            "bid_quote":  bid_quote,
+            "ask_quote":  ask_quote,
             "bid_filled": bid_filled,
             "ask_filled": ask_filled,
-            "cash": cash,
-            "inventory": inventory,
-            "mid_price": future["mid_price"],
+            "cash":       cash,
+            "inventory":  inventory,
         })
 
     results = pd.DataFrame(results)
     return results
-
-def main():
-    naive_results = backtest(
-        market_data,
-        naive_strategy,
-    )
-
-    as_results = backtest(
-        market_data,
-        as_strategy,
-    )
-
-    naive_metrics = calculate_metrics(naive_results)
-    as_metrics = calculate_metrics(as_results)
-    print("naive model \n", pd.DataFrame([naive_metrics]))
-    print("Avellenada-Stoikov model \n", pd.DataFrame([as_metrics]))
-
-    # print(as_results[[
-    #     "event_time",
-    #     "bid_quote",
-    #     "ask_quote",
-    #     "bid_filled",
-    #     "ask_filled",
-    #     "cash",
-    #     "inventory",
-    # ]].head(10))
-
-    print("Bid fills:", as_results["bid_filled"].sum(), naive_results["bid_filled"].sum())
-    print("Ask fills:", as_results["ask_filled"].sum(), naive_results["ask_filled"].sum())
-    print("Final inventory:", as_results["inventory"].iloc[-1], naive_results["inventory"].iloc[-1])
-    print("Max inventory:", as_results["inventory"].abs().max(), naive_results["inventory"].abs().max())
-    print("Final PnL:", as_results["pnl"].iloc[-1], naive_results["pnl"].iloc[-1])
-
-if __name__ == '__main__':
-    main()

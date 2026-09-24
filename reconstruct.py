@@ -16,7 +16,6 @@ def reconstruct(df):
     df["price"] = df["price"].astype(float)
     df["quantity"] = df["quantity"].astype(float)
     df["event_time"] = pd.to_datetime(df["event_time"], unit="ms") #could do ns too
-    print(df["event_time"].head())
     # Reconstruct the final orderbook
     orderbook = {
         'bid': {},
@@ -83,7 +82,7 @@ def reconstruct(df):
         "best_ask": best_asks,
         "best_ask_qty": ba_qty,
     })
-    
+
     return market_data
 
 
