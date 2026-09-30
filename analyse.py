@@ -12,7 +12,7 @@ def analyse(market, time_res):
     df = market.copy()
 
     df["sampletime"] = pd.to_datetime(df["event_time"], unit="ms")
-    df = df.set_index("datetime")
+    df = df.set_index("sampletime") #turns df into a timeseries
 
     df = df.resample(time_res).last()
 
