@@ -23,7 +23,7 @@ def analyse(market, time_res):
     # Log returns
     df["log_return"] = np.log(df["mid_price"] / df["mid_price"].shift(1))
     # Rolling 1-second volatility
-    df["volatility"] = (df["log_return"].rolling(time_res).std())
+    df["volatility"] = df["log_return"].rolling(20).std()
     return df[["mid_price", "spread", "log_return", "volatility"]]
 
 # we calculate OFI seperately after we compare "inventory-aware" vs naive model results
