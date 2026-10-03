@@ -2,18 +2,27 @@ import numpy as np
 import pandas as pd
 
 def calculate_metrics(results, initial_cash=1000000.0):
+    """
+    calculate metrics after performing backtest.
+    """
     df = results.copy()
-    df["portfolio_value"] = df["cash"] + df["inventory"] * df["mid_price"]
-    df["pnl"] = df["portfolio_value"] - initial_cash
-    step_s = np.median(np.diff(df["time"].to_numpy())) / 1000
-    steps_per_year = 365 * 24 * 3600 / step_s
+    #adding these metrics
+    df["portfolio_value"] = df["cash"] + df["inventory"] * df["mid_price"] # "total" value
+    df["pnl"] = df["portfolio_value"] - initial_cash # value of invested funds
+
+    step_s = np.median(np.diff(df["time"].to_numpy())) / 1000  #median "step" gap between timestamps in HR data
+    steps_per_year = 365 * 24 * 3600 / step_s #crypto trades continuously; annualise
     returns = df["portfolio_value"].pct_change().dropna()
     std = returns.std()
-    sharpe = np.nan if (np.isnan(std) or std == 0) else (returns.mean() / std * np.sqrt(steps_per_year))
-    df["inventory_exposure"] = df["inventory"].abs() * df["mid_price"]
+    #return NaN if undefined, otherwise find sharpe.
+    sharpe = np.nan if (np.isnan(std) or std == 0) else (returns.mean() / std * np.sqrt(steps_per_year)) 
+
+    df["inventory_exposure"] = df["inventory"].abs() * df["mid_price"] #shows how risky strategy was
+
     running_max = df["portfolio_value"].cummax()
     drawdown = df["portfolio_value"] - running_max
     drawdown_pct = df["portfolio_value"] / running_max - 1
+
     n_bid = int(df["bid_filled"].sum())
     n_ask = int(df["ask_filled"].sum())
     return {
@@ -33,17 +42,23 @@ def calculate_metrics(results, initial_cash=1000000.0):
 
 def _to_ms(series):
     """
-    Int64 ms epoch, whether `series` is already a raw ms integer column or a
-    datetime64 column (in any resolution: ns/us/ms). Casting to datetime64[ms]
-    first forces the unit before converting to int64.
+    Ensure HR and LR data has a standard time unit.
     """
+    #check if column is already a datetime datatype
     if pd.api.types.is_datetime64_any_dtype(series):
         return series.astype("datetime64[ms]").astype("int64").to_numpy()
+    #otherwise just return directly int64 type series
     return series.to_numpy().astype(np.int64)
 
 
 def backtest(HR_df, LR_df, strategy, initial_cash=1000000.0, initial_inventory=0.0, order_size=0.1):
-    LR_df = LR_df.dropna(subset=["volatility"]).reset_index()   # FIXED: was reset_index(drop=True)
+    """
+    prepare LowRes + HighRes data -> convert to np for speed.
+    loop over consec times (t0,t1) -> get bid/ask from strategy -> 
+    find HR events in [t0,t1] interval -> check for fill -> update cash, inv, fill_time
+    -> return df
+    """
+    LR_df = LR_df.dropna(subset=["volatility"]).reset_index()
     HR_df = HR_df.sort_values("event_time").reset_index(drop=True)
 
     lr_t = _to_ms(LR_df["sampletime"])
@@ -51,7 +66,7 @@ def backtest(HR_df, LR_df, strategy, initial_cash=1000000.0, initial_inventory=0
     lr_vol = LR_df["volatility"].to_numpy()
     lr_spread = LR_df["spread"].to_numpy()
 
-    hr_t = _to_ms(HR_df["event_time"])  # FIXED: event_time may already be datetime-like
+    hr_t = _to_ms(HR_df["event_time"])
     hr_bid = HR_df["best_bid"].to_numpy()
     hr_ask = HR_df["best_ask"].to_numpy()
 
@@ -65,11 +80,13 @@ def backtest(HR_df, LR_df, strategy, initial_cash=1000000.0, initial_inventory=0
             mid_price=lr_mid[i], volatility=lr_vol[i], spread=lr_spread[i],
             inventory=inventory, time_horizon=time_horizon,
         )
+        #check where t0, t1 inserts in HR data; open on left to avoid filling at quote time
         low = np.searchsorted(hr_t, t0, side="right")
         high = np.searchsorted(hr_t, t1, side="right")
         bid_filled = ask_filled = False
         bid_fill_time = ask_fill_time = np.nan
-        if high > low:
+        if high > low: # if there are any events between t0 and t1 non-example: [t0, t1]
+            # list of booleans e.g. [True, False, False]
             bid_hits = hr_ask[low:high] <= bid_quote
             ask_hits = hr_bid[low:high] >= ask_quote
             if bid_hits.any():

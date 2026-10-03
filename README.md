@@ -19,21 +19,27 @@ What this project will aim to do, then, is to firstly investigate whether the re
 
 ## Data
 what data am I using, what units.
-Getting the order book data ended up being more of a pain than I originally thought it would be.
-I had to already make some design choices: do I want L1 or L2 data? In other words, how detailed do i want my data to be? If I want more detail, though, that will cost the length of time I can simulate. 
-I decided that L2 data was more aligned with the spirit of this project: I want to test the AS model in a more realistic environment, so I should be open to the idea of simulating quote fills accounting for volume. 
-There are more caveats though; some data sources provide high quality L2 data, but I couldn't import more than 1 hour at a time. 
-Other sources include using a Binance API, and downloading orderbook data myself. 
-For the first version of my project, I wanted to get straight to implementing the strategy, so I went with downloading the pre-recorded data on cryptohftdata.com. 
+
 
 
 
 ## Strategy
 what will I do with it, why, and how?
+
+- HR/LR data
+Because I was using data that was not my own, I had to filter out a lower-resolution time series of the data; this gave me the idea of trying different time resolutions with my trading strategies. 
+I would import the high-resolution data with millisecond precision (most of the data only needed ~100ms precision anyway), and then filter out lower-resolution dataframes for: 100ms, 1s, 5s, 1min. I could then compare how the trading strategies did on several time scales. It would also serve the purpose of protecting my results from being completely invalid: market impact was certainly a worry for me, so by keeping the order size that I quoted small, and having my strategy trade at a range of time frequencies, my market impact should be low.
+
+There was also the problem of RAM: for a more accurate trading strategy, I would need lots of high-quality data. However, my computer couldn't even import a day's worth of BTCUSDT order book L2 data at once in a parquet file. 
+My work-around for this was to import each hour of the day seperately, and then have my main.py file handle 1 hour at a time, and concatenate the data fo the results. By that point the data would be filtered by my lower-resolution dataframes. 
+
 ### Avellaneda-Stoikov model
 - Reservation price
+calculated by: mid_price - inventory*gamma*(volatility**2)*time_horizon
+I used fixed gamma = 0.1
 - Optimal spread
-- Inventory adjustment
+the optimal spread around the reservation price at time t was then equal to delta_t:
+delta_t = (1/2)*(gamma*(volatility**2)*time_horizon+(2/gamma)*np.log(1+gamma/k))
 
 ### Implementation
 - Quote frequency
@@ -44,5 +50,16 @@ what will I do with it, why, and how?
 
 ## Methodology & Assumptions
 what assumptions am I making to limit the scope of this project, and why?
+- L2 vs L1 data
+- 1 symbol for 1 day
+- Fill assumption
+- Volatility estimation window
+- Naive benchmark uses volatility currently
+- AS parameters fixed, no calibrated
+- Fixed order size
+- No fees, no latency, no partial fills
+- Time horizon resets every hour
+
+
 ## Results
 what did I find - did I achieve my original goal? To what extent (measurements)?

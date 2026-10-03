@@ -11,7 +11,7 @@ take the dowloaded orderbook data, and make time-series data and store it.
 # Reconstruct orderbook from events
 # Load orderbook events
 
-# Convert price and quantity to float
+# Convert price and quantity to float; originally kept as string for better accuracy
 def reconstruct(df):
     df["price"] = df["price"].astype(float)
     df["quantity"] = df["quantity"].astype(float)
@@ -23,7 +23,7 @@ def reconstruct(df):
     }
 
     was_prev_snapshot = False
-    # Create numpy arrays for faster processing
+    # create numpy arrays for faster processing
     prices = np.array(df["price"])
     quantities = np.array(df["quantity"])
     event_types = np.array(df["event_type"])
@@ -40,7 +40,7 @@ def reconstruct(df):
 
     prev_time = 0
     # loop until our timeseries fills up.
-    for i in tqdm.tqdm(range(len(df))):
+    for i in tqdm.tqdm(range(len(df))): # tqdm creates terminal loading bar
         price = prices[i]
         quantity = quantities[i]
         event_type = event_types[i]

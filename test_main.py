@@ -8,7 +8,7 @@ matplotlib.use("Agg")  # headless: never pops a GUI window, never blocks
 import main  # noqa: E402  (import after backend is set)
 """
 Smoke test for main.py: runs the REAL reconstruct/analyse/backtest pipeline
-end-to-end on just 1-2 hours of real data, so you catch integration bugs
+end-to-end on just 1-2 hours of real data, to catch integration bugs
 (shape mismatches, empty LR frames at coarse resolutions, plotting errors)
 before committing to a 24-hour run.
 
@@ -24,8 +24,7 @@ TEST_OUTPUT_DIR = Path("test_output")
 
 
 def check(full, metrics):
-    """Basic sanity checks that would otherwise only surface as confusing
-    downstream errors or silently-wrong plots."""
+    """Basic sanity checks: empty df, NaN df, 0 fills"""
     problems = []
 
     for k, df in full.items():
