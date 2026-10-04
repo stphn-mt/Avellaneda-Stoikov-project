@@ -120,7 +120,6 @@ continuous session, although T-t resets.
 pip install -r requirements.txt
 python main.py
 ```
-<Data setup instructions and expected folder structure.>
 
 ## References
 - Avellaneda, M. & Stoikov, S. (2008). *High-frequency trading in a limit order book.*
