@@ -1,12 +1,11 @@
 # Avellaneda-Stoikov Market Making: Backtest on Real BTCUSDT L2 Data
 
 ## Objective
-implement the Avellaneda-Stoikov (AS) market-making model, backtest it
+Implement the Avellaneda-Stoikov (AS) market-making model, backtest it
 on real L2 order book data, and compare it against a naive baseline across quoting
 frequencies. 
 
-This is just a toy project to get familiar with order books, trading strategies, and their assumptions.
-I only used 24 hour's worth fo data, and results ended up being quite mixed, with sharpe ratios of 50+ which aren't meaningful.
+This is a toy project for me to better understand market microstructure, trading strategies and their assumptions.
 
 ## Introduction
 
